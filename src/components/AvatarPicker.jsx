@@ -1,4 +1,4 @@
-import { User, Smile, Heart, Star, Zap, Moon, Sun, Cloud, Flower, Fire, Water, Mountain, Wind } from 'lucide-react'
+import { User, Smile, Heart, Star, Zap, Moon, Sun, Cloud, Flower, Flame, Droplet, Mountain, Wind } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const avatarOptions = [
@@ -11,8 +11,8 @@ const avatarOptions = [
   { id: 'sun', icon: Sun, color: 'bg-orange-500' },
   { id: 'cloud', icon: Cloud, color: 'bg-cyan-500' },
   { id: 'flower', icon: Flower, color: 'bg-pink-500' },
-  { id: 'fire', icon: Fire, color: 'bg-red-600' },
-  { id: 'water', icon: Water, color: 'bg-blue-600' },
+  { id: 'fire', icon: Flame, color: 'bg-red-600' },
+  { id: 'water', icon: Droplet, color: 'bg-blue-600' },
   { id: 'mountain', icon: Mountain, color: 'bg-stone-600' },
   { id: 'wind', icon: Wind, color: 'bg-teal-500' },
 ]

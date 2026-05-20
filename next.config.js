@@ -13,7 +13,6 @@ const nextConfig = {
     NEXT_PUBLIC_APP_NAME: 'Integrated Author',
   },
   experimental: {
-    optimizeCss: true,
     scrollRestoration: true,
   },
   compress: true,

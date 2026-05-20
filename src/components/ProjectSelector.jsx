@@ -95,7 +95,7 @@ export function ProjectSelector({ onClose }) {
       const tmp = document.createElement('div')
       tmp.innerHTML = ch.content || ''
       return sum + (tmp.textContent || tmp.innerText || '').length
-    }, 0) || 0
+    }, 0)) || 0
     return { chapterCount, wordCount }
   }
 
