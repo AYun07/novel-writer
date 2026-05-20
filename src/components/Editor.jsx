@@ -11,6 +11,7 @@ import Underline from '@tiptap/extension-underline'
 import CharacterCount from '@tiptap/extension-character-count'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import { useEffect, useCallback, useRef } from 'react'
 import { 
   Bold, 
   Italic, 
@@ -37,11 +38,50 @@ import {
   FileText,
   CheckSquare,
   Hash,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
+const DEBOUNCE_DELAY = 500
+
+function debounce(func, wait) {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
 export default function Editor({ content, onChange, placeholder = '开始写作...' }) {
+  const debouncedOnChangeRef = useRef(debounce(onChange, DEBOUNCE_DELAY))
+  const isInitialLoadRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      if (debouncedOnChangeRef.current) {
+        debouncedOnChangeRef.current = null
+      }
+    }
+  }, [])
+
+  const handleUpdate = useCallback(({ editor }) => {
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      return
+    }
+    
+    const html = editor.getHTML()
+    if (debouncedOnChangeRef.current) {
+      debouncedOnChangeRef.current(html)
+    }
+  }, [])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -80,15 +120,22 @@ export default function Editor({ content, onChange, placeholder = '开始写作.
       })
     ],
     content,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
-    },
+    onUpdate: handleUpdate,
     editorProps: {
       attributes: {
-        class: 'prose prose-lg max-w-none focus:outline-none min-h-[500px]'
+        class: 'prose prose-lg max-w-none focus:outline-none min-h-[500px] prose-headings:text-text-primary prose-p:text-text-secondary'
       }
-    }
+    },
+    injectCSS: false
   })
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      isInitialLoadRef.current = true
+      editor.commands.setContent(content, false)
+      isInitialLoadRef.current = false
+    }
+  }, [content, editor])
 
   if (!editor) return null
 
@@ -117,280 +164,289 @@ export default function Editor({ content, onChange, placeholder = '开始写作.
   const charCount = editor.storage.characterCount?.characters?.() || 0
   const readingTime = Math.ceil(wordCount / 400)
 
+  const [showFormatBar, setShowFormatBar] = useState(true)
+
   return (
     <div className="flex flex-col h-full">
-      {/* 工具栏 */}
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-border bg-bg-secondary">
-        {/* 撤销/重做 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().undo().run()}
-            disabled={!editor.can().undo()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
-              !editor.can().undo() && 'opacity-30'
-            )}
-            title="撤销 (Ctrl+Z)"
-          >
-            <Undo className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().redo().run()}
-            disabled={!editor.can().redo()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
-              !editor.can().redo() && 'opacity-30'
-            )}
-            title="重做 (Ctrl+Y)"
-          >
-            <Redo className="w-4 h-4" />
-          </button>
+      {showFormatBar && (
+        <div className="flex flex-wrap items-center gap-1 p-2 border-b border-border bg-bg-secondary">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().undo().run()}
+              disabled={!editor.can().undo()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
+                !editor.can().undo() && 'opacity-30'
+              )}
+              title="撤销 (Ctrl+Z)"
+            >
+              <Undo className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().redo().run()}
+              disabled={!editor.can().redo()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary disabled:opacity-30 disabled:cursor-not-allowed transition-colors',
+                !editor.can().redo() && 'opacity-30'
+              )}
+              title="重做 (Ctrl+Y)"
+            >
+              <Redo className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('bold') && 'bg-bg-tertiary text-primary'
+              )}
+              title="加粗 (Ctrl+B)"
+            >
+              <Bold className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('italic') && 'bg-bg-tertiary text-primary'
+              )}
+              title="斜体 (Ctrl+I)"
+            >
+              <Italic className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('underline') && 'bg-bg-tertiary text-primary'
+              )}
+              title="下划线 (Ctrl+U)"
+            >
+              <UnderlineIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('strike') && 'bg-bg-tertiary text-primary'
+              )}
+              title="删除线"
+            >
+              <Strikethrough className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleHighlight().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('highlight') && 'bg-bg-tertiary text-primary'
+              )}
+              title="高亮"
+            >
+              <Highlighter className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('heading', { level: 1 }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="标题1"
+            >
+              <Heading1 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('heading', { level: 2 }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="标题2"
+            >
+              <Heading2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('heading', { level: 3 }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="标题3"
+            >
+              <Heading3 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('bulletList') && 'bg-bg-tertiary text-primary'
+              )}
+              title="无序列表"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('orderedList') && 'bg-bg-tertiary text-primary'
+              )}
+              title="有序列表"
+            >
+              <ListOrdered className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleTaskList().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('taskList') && 'bg-bg-tertiary text-primary'
+              )}
+              title="任务列表"
+            >
+              <CheckSquare className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive({ textAlign: 'left' }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="左对齐"
+            >
+              <AlignLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive({ textAlign: 'center' }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="居中对齐"
+            >
+              <AlignCenter className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive({ textAlign: 'right' }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="右对齐"
+            >
+              <AlignRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive({ textAlign: 'justify' }) && 'bg-bg-tertiary text-primary'
+              )}
+              title="两端对齐"
+            >
+              <AlignJustify className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('blockquote') && 'bg-bg-tertiary text-primary'
+              )}
+              title="引用"
+            >
+              <Quote className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('code') && 'bg-bg-tertiary text-primary'
+              )}
+              title="行内代码"
+            >
+              <Code className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().setHorizontalRule().run()}
+              className="p-2 rounded hover:bg-bg-tertiary transition-colors"
+              title="分割线"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('codeBlock') && 'bg-bg-tertiary text-primary'
+              )}
+              title="代码块"
+            >
+              <Hash className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={setLink}
+              className={cn(
+                'p-2 rounded hover:bg-bg-tertiary transition-colors',
+                editor.isActive('link') && 'bg-bg-tertiary text-primary'
+              )}
+              title="添加链接"
+            >
+              <Link2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={addImage}
+              className="p-2 rounded hover:bg-bg-tertiary transition-colors"
+              title="添加图片"
+            >
+              <ImageIcon className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setShowFormatBar(!showFormatBar)}
+              className="p-2 rounded hover:bg-bg-tertiary transition-colors"
+              title={showFormatBar ? '隐藏工具栏' : '显示工具栏'}
+            >
+              {showFormatBar ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 文本格式 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('bold') && 'bg-bg-tertiary text-primary'
-            )}
-            title="加粗 (Ctrl+B)"
-          >
-            <Bold className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('italic') && 'bg-bg-tertiary text-primary'
-            )}
-            title="斜体 (Ctrl+I)"
-          >
-            <Italic className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('underline') && 'bg-bg-tertiary text-primary'
-            )}
-            title="下划线 (Ctrl+U)"
-          >
-            <UnderlineIcon className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('strike') && 'bg-bg-tertiary text-primary'
-            )}
-            title="删除线"
-          >
-            <Strikethrough className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('highlight') && 'bg-bg-tertiary text-primary'
-            )}
-            title="高亮"
-          >
-            <Highlighter className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 标题 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('heading', { level: 1 }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="标题1"
-          >
-            <Heading1 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('heading', { level: 2 }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="标题2"
-          >
-            <Heading2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('heading', { level: 3 }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="标题3"
-          >
-            <Heading3 className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 列表和对齐 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('bulletList') && 'bg-bg-tertiary text-primary'
-            )}
-            title="无序列表"
-          >
-            <List className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('orderedList') && 'bg-bg-tertiary text-primary'
-            )}
-            title="有序列表"
-          >
-            <ListOrdered className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleTaskList().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('taskList') && 'bg-bg-tertiary text-primary'
-            )}
-            title="任务列表"
-          >
-            <CheckSquare className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 对齐方式 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive({ textAlign: 'left' }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="左对齐"
-          >
-            <AlignLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive({ textAlign: 'center' }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="居中对齐"
-          >
-            <AlignCenter className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive({ textAlign: 'right' }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="右对齐"
-          >
-            <AlignRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive({ textAlign: 'justify' }) && 'bg-bg-tertiary text-primary'
-            )}
-            title="两端对齐"
-          >
-            <AlignJustify className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 引用和代码 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('blockquote') && 'bg-bg-tertiary text-primary'
-            )}
-            title="引用"
-          >
-            <Quote className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('code') && 'bg-bg-tertiary text-primary'
-            )}
-            title="行内代码"
-          >
-            <Code className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            className="p-2 rounded hover:bg-bg-tertiary transition-colors"
-            title="分割线"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('codeBlock') && 'bg-bg-tertiary text-primary'
-            )}
-            title="代码块"
-          >
-            <Hash className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        {/* 链接和图片 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={setLink}
-            className={cn(
-              'p-2 rounded hover:bg-bg-tertiary transition-colors',
-              editor.isActive('link') && 'bg-bg-tertiary text-primary'
-            )}
-            title="添加链接"
-          >
-            <Link2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={addImage}
-            className="p-2 rounded hover:bg-bg-tertiary transition-colors"
-            title="添加图片"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* 浮动菜单 */}
       {editor && (
-        <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+        <BubbleMenu 
+          editor={editor} 
+          tippyOptions={{ duration: 100 }}
+          className="hidden md:block"
+        >
           <div className="flex items-center gap-1 p-2 bg-bg-sidebar rounded-lg shadow-lg border border-border-dark">
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
@@ -432,12 +488,10 @@ export default function Editor({ content, onChange, placeholder = '开始写作.
         </BubbleMenu>
       )}
 
-      {/* 编辑器内容 */}
-      <div className="flex-1 overflow-auto p-6">
-        <EditorContent editor={editor} className="min-h-full" />
+      <div className="flex-1 overflow-auto p-6 bg-bg-primary">
+        <EditorContent editor={editor} className="min-h-full max-w-4xl mx-auto" />
       </div>
 
-      {/* 底部状态栏 */}
       <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-bg-secondary text-xs text-text-muted">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
@@ -465,4 +519,9 @@ export default function Editor({ content, onChange, placeholder = '开始写作.
       </div>
     </div>
   )
+}
+
+function useState(initialValue) {
+  const [state, setState] = require('react').useState(initialValue)
+  return [state, setState]
 }

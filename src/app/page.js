@@ -1,23 +1,87 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Sidebar from '../components/Sidebar'
-import Editor from '../components/Editor'
-import AISidebar from '../components/AISidebar'
-import SettingsModal from '../components/SettingsModal'
-import LoginModal from '../components/LoginModal'
-import ExportModal from '../components/ExportModal'
-import BackupRestore from '../components/BackupRestore'
-import CharacterManager from '../components/CharacterManager'
-import WorldSettingsManager from '../components/WorldSettingsManager'
-import NovelInfoManager from '../components/NovelInfoManager'
-import CorpusManager from '../components/CorpusManager'
-import SessionManager from '../components/SessionManager'
-import TemplateManager from '../components/TemplateManager'
-import StatsPanel from '../components/StatsPanel'
-import Toast from '../components/Toast'
+import dynamic from 'next/dynamic'
 import { useAppStore } from '../store/useAppStore'
 import { onAuthStateChangedHandler } from '../lib/firebase'
+import { Menu, Sparkles, X } from 'lucide-react'
+import { cn } from '../lib/utils'
+import { useAutoSave, useKeyboardShortcuts } from '../hooks/useAutoSave'
+
+const Sidebar = dynamic(() => import('../components/Sidebar'), {
+  loading: () => <div className="w-72 bg-bg-sidebar h-screen animate-pulse" />,
+  ssr: false
+})
+
+const Editor = dynamic(() => import('../components/Editor'), {
+  loading: () => <div className="flex-1 bg-bg-primary animate-pulse" />,
+  ssr: false
+})
+
+const AISidebar = dynamic(() => import('../components/AISidebar'), {
+  loading: () => <div className="w-72 bg-bg-sidebar h-screen animate-pulse" />,
+  ssr: false
+})
+
+const SettingsModal = dynamic(() => import('../components/SettingsModal'), {
+  loading: () => null,
+  ssr: false
+})
+
+const LoginModal = dynamic(() => import('../components/LoginModal'), {
+  loading: () => null,
+  ssr: false
+})
+
+const ExportModal = dynamic(() => import('../components/ExportModal'), {
+  loading: () => null,
+  ssr: false
+})
+
+const BackupRestore = dynamic(() => import('../components/BackupRestore'), {
+  loading: () => null,
+  ssr: false
+})
+
+const CharacterManager = dynamic(() => import('../components/CharacterManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const WorldSettingsManager = dynamic(() => import('../components/WorldSettingsManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const NovelInfoManager = dynamic(() => import('../components/NovelInfoManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const CorpusManager = dynamic(() => import('../components/CorpusManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const SessionManager = dynamic(() => import('../components/SessionManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const TemplateManager = dynamic(() => import('../components/TemplateManager'), {
+  loading: () => null,
+  ssr: false
+})
+
+const StatsPanel = dynamic(() => import('../components/StatsPanel'), {
+  loading: () => <div className="w-80 bg-bg-secondary animate-pulse" />,
+  ssr: false
+})
+
+const Toast = dynamic(() => import('../components/Toast'), {
+  loading: () => null,
+  ssr: false
+})
 
 export default function Home() {
   const { 
@@ -27,10 +91,16 @@ export default function Home() {
     showSettings, 
     showLoginModal,
     setChapters,
-    setShowToast
+    setShowToast,
+    setSidebarOpen,
+    setAiSidebarOpen
   } = useAppStore()
 
   const [isLoading, setIsLoading] = useState(true)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+
+  useAutoSave(300000)
+  useKeyboardShortcuts()
 
   const activeChapter = chapters?.length > 0 ? chapters.find(ch => ch.id === activeChapterId) : null
 
@@ -80,9 +150,80 @@ export default function Home() {
     <div className="min-h-screen bg-bg-primary">
       <Sidebar />
       <AISidebar />
-      
-      <main className="ml-72 mr-72 min-h-screen">
-        <header className="border-b border-border bg-bg-secondary px-6 py-4">
+
+      <header className="fixed top-0 left-0 right-0 z-20 lg:hidden border-b border-border bg-bg-secondary px-4 py-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-text-primary">
+            {activeChapter?.title || '未命名章节'}
+          </h1>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setAiSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
+            >
+              <Sparkles className="w-5 h-5 text-primary" />
+            </button>
+            <button 
+              onClick={() => setShowMobileMenu(true)}
+              className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowMobileMenu(false)}
+          />
+          <div className="absolute top-16 left-0 right-0 bg-bg-sidebar p-4 space-y-2">
+            <button 
+              onClick={() => {
+                setShowMobileMenu(false)
+                setSidebarOpen(true)
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+              <span>侧边栏</span>
+            </button>
+            <button 
+              onClick={() => {
+                setShowMobileMenu(false)
+                setAiSidebarOpen(true)
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors"
+            >
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span>AI助手</span>
+            </button>
+            <div className="border-t border-border-dark my-2" />
+            <button 
+              onClick={() => setShowMobileMenu(false)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-text-muted"
+            >
+              <X className="w-4 h-4" />
+              <span>关闭菜单</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <main className={cn(
+        "min-h-screen transition-all duration-300",
+        "lg:ml-72 lg:mr-72",
+        "md:ml-72 md:mr-0",
+        "sm:ml-0 sm:mr-0",
+        "pt-0 lg:pt-0",
+        "pt-16 lg:pt-0"
+      )}>
+        <header className={cn(
+          "border-b border-border bg-bg-secondary px-6 py-4",
+          "hidden lg:block"
+        )}>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-text-primary">
@@ -100,8 +241,11 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex h-[calc(100vh-80px)]">
-          <div className="flex-1">
+        <div className="flex h-[calc(100vh-80px)] lg:h-[calc(100vh-80px)]">
+          <div className={cn(
+            "flex-1",
+            "lg:pr-4"
+          )}>
             <Editor
               content={activeChapter?.content || ''}
               onChange={handleContentChange}
@@ -109,7 +253,10 @@ export default function Home() {
             />
           </div>
           
-          <div className="w-80 border-l border-border bg-bg-secondary p-4 overflow-y-auto hidden lg:block">
+          <div className={cn(
+            "w-80 border-l border-border bg-bg-secondary p-4 overflow-y-auto",
+            "hidden lg:block"
+          )}>
             <StatsPanel />
           </div>
         </div>

@@ -34,6 +34,13 @@ const PROVIDER_CONFIGS = {
   }
 }
 
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  retryDelay: 1000,
+  retryBackoff: 2,
+  retryableStatusCodes: [429, 500, 502, 503, 504]
+}
+
 function getBaseURL(config) {
   return PROVIDER_CONFIGS[config.providerType]?.baseURL || config.baseURL || PROVIDER_CONFIGS.zhipu.baseURL
 }
@@ -49,8 +56,6 @@ function buildHeaders(config) {
     headers['Authorization'] = `Bearer ${config.apiKey}`
   } else if (config.providerType === 'openai') {
     headers['Authorization'] = `Bearer ${config.apiKey}`
-  } else if (config.providerType === 'gemini') {
-    // Gemini不需要Authorization header
   }
   
   return headers
@@ -63,7 +68,11 @@ function buildModelName(providerType, selectedModel) {
   return selectedModel
 }
 
-async function makeRequest(config, messages, options = {}) {
+async function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function makeRequestWithRetry(config, messages, options = {}, attempt = 1) {
   const baseURL = getBaseURL(config)
   const headers = buildHeaders(config)
   
@@ -103,7 +112,7 @@ async function makeRequest(config, messages, options = {}) {
   try {
     const response = await axios.post(endpoint, requestBody, {
       headers,
-      timeout: 120000
+      timeout: options.timeout || config.timeout || 120000
     })
     
     if (config.providerType === 'gemini') {
@@ -112,18 +121,32 @@ async function makeRequest(config, messages, options = {}) {
       return response.data.choices?.[0]?.message?.content || ''
     }
   } catch (error) {
-    console.error('AI请求失败:', error)
+    console.error(`AI请求失败 (尝试 ${attempt}/${RETRY_CONFIG.maxRetries}):`, error)
+    
+    const status = error.response?.status
+    if (status && RETRY_CONFIG.retryableStatusCodes.includes(status) && attempt < RETRY_CONFIG.maxRetries) {
+      const delay = RETRY_CONFIG.retryDelay * Math.pow(RETRY_CONFIG.retryBackoff, attempt - 1)
+      console.log(`等待 ${delay}ms 后重试...`)
+      await wait(delay)
+      return makeRequestWithRetry(config, messages, options, attempt + 1)
+    }
+    
     if (error.response) {
-      throw new Error(`API错误: ${error.response.status} - ${error.response.data?.error?.message || '未知错误'}`)
+      const errorMessage = error.response.data?.error?.message || 
+                          error.response.data?.message || 
+                          `HTTP错误 ${error.response.status}`
+      throw new Error(`API错误: ${errorMessage}`)
     } else if (error.request) {
-      throw new Error('网络错误: 无法连接到服务器')
+      throw new Error('网络错误: 无法连接到服务器，请检查网络连接')
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('请求超时: 服务器响应时间过长')
     } else {
-      throw new Error(error.message)
+      throw new Error(`请求失败: ${error.message}`)
     }
   }
 }
 
-async function* streamRequest(config, messages, options = {}) {
+async function* streamRequestWithRetry(config, messages, options = {}, attempt = 1) {
   const baseURL = getBaseURL(config)
   const headers = buildHeaders(config)
   
@@ -156,7 +179,7 @@ async function* streamRequest(config, messages, options = {}) {
   try {
     const response = await axios.post(endpoint, requestBody, {
       headers,
-      timeout: 120000,
+      timeout: options.timeout || config.timeout || 120000,
       responseType: 'stream'
     })
     
@@ -170,7 +193,7 @@ async function* streamRequest(config, messages, options = {}) {
           const content = data.candidates?.[0]?.content?.parts?.[0]?.text
           if (content) {
             fullContent += content
-            yield { chunk: content, full: fullContent }
+            yield { chunk: content, full: fullContent, error: null }
           }
         } catch (e) {
           continue
@@ -192,7 +215,7 @@ async function* streamRequest(config, messages, options = {}) {
               const content = parsed.choices?.[0]?.delta?.content
               if (content) {
                 fullContent += content
-                yield { chunk: content, full: fullContent }
+                yield { chunk: content, full: fullContent, error: null }
               }
             } catch (e) {
               continue
@@ -202,27 +225,51 @@ async function* streamRequest(config, messages, options = {}) {
       }
     }
   } catch (error) {
-    console.error('流式请求失败:', error)
-    throw error
+    console.error(`流式请求失败 (尝试 ${attempt}/${RETRY_CONFIG.maxRetries}):`, error)
+    
+    const status = error.response?.status
+    if (status && RETRY_CONFIG.retryableStatusCodes.includes(status) && attempt < RETRY_CONFIG.maxRetries) {
+      const delay = RETRY_CONFIG.retryDelay * Math.pow(RETRY_CONFIG.retryBackoff, attempt - 1)
+      console.log(`等待 ${delay}ms 后重试...`)
+      await wait(delay)
+      yield* streamRequestWithRetry(config, messages, options, attempt + 1)
+      return
+    }
+    
+    let errorMessage = '未知错误'
+    if (error.response) {
+      errorMessage = error.response.data?.error?.message || `HTTP错误 ${error.response.status}`
+    } else if (error.request) {
+      errorMessage = '网络错误: 无法连接到服务器'
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = '请求超时'
+    } else {
+      errorMessage = error.message
+    }
+    
+    yield { chunk: '', full: '', error: new Error(`流式请求失败: ${errorMessage}`) }
   }
 }
 
-export async function generateText(prompt, config) {
+export async function generateText(prompt, config, options = {}) {
   const messages = [{ role: 'user', content: prompt }]
-  return makeRequest(config, messages)
+  return makeRequestWithRetry(config, messages, options)
 }
 
-export async function generateTextStream(prompt, config, onChunk) {
+export async function generateTextStream(prompt, config, onChunk, options = {}) {
   const messages = [{ role: 'user', content: prompt }]
   
-  for await (const { chunk, full } of streamRequest(config, messages)) {
+  for await (const { chunk, full, error } of streamRequestWithRetry(config, messages, options)) {
+    if (error) {
+      throw error
+    }
     if (onChunk) {
       onChunk(chunk, full)
     }
   }
 }
 
-export async function chatWithAI(message, history = [], config, systemPrompt = null, tools = [], onChunk = null) {
+export async function chatWithAI(message, history = [], config, systemPrompt = null, tools = [], onChunk = null, options = {}) {
   const messages = []
   
   if (systemPrompt) {
@@ -239,15 +286,18 @@ export async function chatWithAI(message, history = [], config, systemPrompt = n
   messages.push({ role: 'user', content: message })
   
   if (onChunk) {
-    for await (const { chunk, full } of streamRequest(config, messages)) {
+    for await (const { chunk, full, error } of streamRequestWithRetry(config, messages, options)) {
+      if (error) {
+        throw error
+      }
       onChunk(chunk, full)
     }
   } else {
-    return makeRequest(config, messages)
+    return makeRequestWithRetry(config, messages, options)
   }
 }
 
-export async function generateOutline(keywords, genre = '', previousOutline = null, config) {
+export async function generateOutline(keywords, genre = '', previousOutline = null, config, options = {}) {
   let prompt = `请根据以下主题关键词为一部小说生成详细的大纲结构：\n\n主题/关键词：${keywords}\n`
   
   if (genre) {
@@ -269,7 +319,7 @@ export async function generateOutline(keywords, genre = '', previousOutline = nu
 请用中文回答，格式清晰易读。`
   }
   
-  return makeRequest(config, [{ role: 'user', content: prompt }])
+  return makeRequestWithRetry(config, [{ role: 'user', content: prompt }], options)
 }
 
 export async function generateChapterContentStream(
@@ -281,7 +331,8 @@ export async function generateChapterContentStream(
   worldSettings = [],
   novelInfo = {},
   config,
-  onChunk
+  onChunk,
+  options = {}
 ) {
   let contextPrompt = `请为小说章节"${chapterTitle}"生成详细内容。\n\n`
   
@@ -322,14 +373,17 @@ export async function generateChapterContentStream(
   
   const messages = [{ role: 'user', content: contextPrompt }]
   
-  for await (const { chunk, full } of streamRequest(config, messages)) {
+  for await (const { chunk, full, error } of streamRequestWithRetry(config, messages, options)) {
+    if (error) {
+      throw error
+    }
     if (onChunk) {
       onChunk(chunk, full)
     }
   }
 }
 
-export async function polishText(content, polishType = 'grammar', instructions = '', config) {
+export async function polishText(content, polishType = 'grammar', instructions = '', config, options = {}) {
   const polishPrompts = {
     grammar: '请修正以下文本的语法错误和错别字，保持原文的风格和意思不变：',
     style: '请优化以下文本的文风，使其更加流畅优美，富有文学性：',
@@ -349,7 +403,7 @@ export async function polishText(content, polishType = 'grammar', instructions =
   
   prompt += '\n\n请直接输出润色后的文本，不要添加任何说明。'
   
-  return makeRequest(config, [{ role: 'user', content: prompt }])
+  return makeRequestWithRetry(config, [{ role: 'user', content: prompt }], options)
 }
 
 export async function generateSummary(content, options = {}, config) {
@@ -369,10 +423,10 @@ export async function generateSummary(content, options = {}, config) {
     + `${formatPrompts[options.format] || '以段落形式呈现'}以下内容的主要内容和要点：\n\n`
     + content + '\n\n请直接输出总结内容。'
   
-  return makeRequest(config, [{ role: 'user', content: prompt }])
+  return makeRequestWithRetry(config, [{ role: 'user', content: prompt }], options)
 }
 
-export async function getWritingAdvice(content, config) {
+export async function getWritingAdvice(content, config, options = {}) {
   const prompt = `请分析以下小说片段，并提供专业的写作建议：\n\n${content}\n\n请从以下几个方面进行评价和建议：
 1. 人物塑造
 2. 情节设计
@@ -382,10 +436,10 @@ export async function getWritingAdvice(content, config) {
 
 请用中文回答，评价要客观具体，建议要实用可行。`
   
-  return makeRequest(config, [{ role: 'user', content: prompt }])
+  return makeRequestWithRetry(config, [{ role: 'user', content: prompt }], options)
 }
 
-export async function webSearch(query, searchConfig) {
+export async function webSearch(query, searchConfig, options = {}) {
   if (!searchConfig.apiKey) {
     throw new Error('请先配置搜索API密钥')
   }
@@ -399,21 +453,21 @@ export async function webSearch(query, searchConfig) {
       api_key: searchConfig.apiKey,
       query,
       search_depth: 'basic',
-      max_results: 5
+      max_results: options.maxResults || 5
     }
   } else if (searchConfig.provider === 'exa') {
     endpoint = `${searchConfig.baseUrl || 'https://api.exa.ai'}/search`
     requestBody = {
       api_key: searchConfig.apiKey,
       query,
-      num_results: 5
+      num_results: options.maxResults || 5
     }
   }
   
   try {
     const response = await axios.post(endpoint, requestBody, {
       headers: { 'Content-Type': 'application/json' },
-      timeout: 30000
+      timeout: options.timeout || 30000
     })
     
     if (searchConfig.provider === 'tavily') {
@@ -431,7 +485,11 @@ export async function webSearch(query, searchConfig) {
     }
   } catch (error) {
     console.error('搜索请求失败:', error)
-    throw new Error('搜索失败：' + error.message)
+    if (error.response) {
+      throw new Error(`搜索失败: ${error.response.data?.message || '未知错误'}`)
+    } else {
+      throw new Error(`搜索失败: ${error.message}`)
+    }
   }
 }
 
@@ -451,4 +509,22 @@ export function getProviderList() {
       name: modelValue.name
     }))
   }))
+}
+
+export function validateApiConfig(config) {
+  const errors = []
+  
+  if (!config.apiKey) {
+    errors.push('请输入API密钥')
+  }
+  
+  if (!PROVIDER_CONFIGS[config.providerType]) {
+    errors.push('请选择有效的AI供应商')
+  }
+  
+  if (!config.selectedModel) {
+    errors.push('请选择模型')
+  }
+  
+  return errors
 }
