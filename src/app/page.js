@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useAppStore } from '../store/useAppStore'
 import { onAuthStateChangedHandler } from '../lib/firebase'
-import { Menu, Sparkles, X, Search, BookOpen, Trophy, Clock, FolderOpen } from 'lucide-react'
+import { Menu, Sparkles, X, Search, BookOpen, Trophy, Clock, FolderOpen, Keyboard } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
@@ -138,8 +138,6 @@ const GlobalSearch = dynamic(() => import('../components/GlobalSearch'), {
   loading: () => null,
   ssr: false
 })
-
-const Keyboard = require('lucide-react').Keyboard
 
 export default function Home() {
   const { 
