@@ -70,6 +70,9 @@ const store = create(
       showVersionHistoryModal: false,
       setShowVersionHistoryModal: (show) => set({ showVersionHistoryModal: !!show }),
 
+      showToolsModal: false,
+      setShowToolsModal: (show) => set({ showToolsModal: !!show }),
+
       theme: 'light',
       setTheme: (theme) => set({ theme }),
       colorScheme: 'blue',

@@ -178,6 +178,114 @@ export default function ExportModal() {
     return blob
   }
 
+  const exportAsEpub = () => {
+    const bookId = 'novel-' + Date.now()
+    const title = novelInfo.title || '未命名小说'
+    const author = novelInfo.author || '未知作者'
+    
+    // EPUB内容
+    const container = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`
+
+    const navDoc = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+  <title>目录</title>
+  <style>
+    body { font-family: "SimSun", serif; margin: 5%; line-height: 1.6; }
+    h1 { text-align: center; margin-bottom: 2em; }
+    ul { list-style-type: none; }
+    li { margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+  <nav epub:type="toc">
+    <h1>目录</h1>
+    <ul>
+      <li><a href="title.xhtml">封面</a></li>
+      ${chapters.map((ch, i) => `<li><a href="chapter${i}.xhtml">${ch.title || '第' + (i+1) + '章'}</a></li>`).join('\n      ')}
+    </ul>
+  </nav>
+</body>
+</html>`
+
+    const titlePage = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${title}</title>
+  <style>
+    body { font-family: "SimSun", serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+    h1 { font-size: 2em; margin-bottom: 1em; }
+    h2 { font-size: 1.2em; font-weight: normal; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <h2>作者: ${author}</h2>
+  ${novelInfo.description ? `<p style="margin-top: 2em; font-size: 0.9em; color: #666;">${novelInfo.description}</p>` : ''}
+</body>
+</html>`
+
+    const chapterFiles = chapters.map((chapter, index) => {
+      const content = stripHtml(chapter.content || '')
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${chapter.title || '第' + (index + 1) + '章'}</title>
+  <style>
+    body { font-family: "SimSun", serif; padding: 1em 2em; line-height: 1.8; text-indent: 2em; }
+    h2 { text-align: center; margin-bottom: 2em; }
+    p { margin: 1em 0; }
+  </style>
+</head>
+<body>
+  <h2>${exportOptions.includeChapterNumbers ? '第' + (index + 1) + '章 ' : ''}${chapter.title || '未命名'}</h2>
+  ${content.split('\n\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('\n  ')}
+</body>
+</html>`
+    })
+
+    const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>${title}</dc:title>
+    <dc:creator>${author}</dc:creator>
+    <dc:language>zh-CN</dc:language>
+    <dc:identifier id="bookid">${bookId}</dc:identifier>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="title" href="title.xhtml" media-type="application/xhtml+xml"/>
+    ${chapters.map((ch, i) => `<item id="chapter${i}" href="chapter${i}.xhtml" media-type="application/xhtml+xml"/>`).join('\n    ')}
+  </manifest>
+  <spine>
+    <itemref idref="title"/>
+    <itemref idref="nav"/>
+    ${chapters.map((ch, i) => `<itemref idref="chapter${i}"/>`).join('\n    ')}
+  </spine>
+</package>`
+
+    // 创建ZIP文件 (EPUB实际上是一个ZIP文件)
+    const zip = new JSZip()
+    zip.file('mimetype', 'application/epub+zip')
+    zip.file('META-INF/container.xml', container)
+    zip.file('OEBPS/nav.xhtml', navDoc)
+    zip.file('OEBPS/title.xhtml', titlePage)
+    zip.file('OEBPS/content.opf', contentOpf)
+    chapters.forEach((ch, i) => {
+      zip.file(`OEBPS/chapter${i}.xhtml`, chapterFiles[i])
+    })
+
+    return zip.generateAsync({ type: 'blob' })
+  }
+
   const handleExport = async () => {
     setIsExporting(true)
     
@@ -205,6 +313,10 @@ export default function ExportModal() {
         case 'docx':
           blob = exportAsDocx()
           extension = 'doc'
+          break
+        case 'epub':
+          blob = await exportAsEpub()
+          extension = 'epub'
           break
         default:
           blob = exportAsTxt()
@@ -235,8 +347,9 @@ export default function ExportModal() {
     { value: 'txt', label: 'TXT 纯文本', icon: FileText, description: '通用文本格式，可用任何编辑器打开', color: 'blue' },
     { value: 'markdown', label: 'Markdown', icon: FileCode, description: '轻量级标记格式，支持排版', color: 'purple' },
     { value: 'html', label: 'HTML 网页', icon: FileSpreadsheet, description: '网页格式，可直接在浏览器查看', color: 'orange' },
+    { value: 'epub', label: 'EPUB 电子书', icon: BookOpen, description: '标准电子书格式，支持阅读器', color: 'green' },
     { value: 'docx', label: 'Word 文档', icon: File, description: 'Microsoft Word 格式', color: 'indigo' },
-    { value: 'json', label: 'JSON 数据', icon: FileJson, description: '包含所有元数据的结构化数据', color: 'green' }
+    { value: 'json', label: 'JSON 数据', icon: FileJson, description: '包含所有元数据的结构化数据', color: 'cyan' }
   ]
 
   if (!showExportModal) return null

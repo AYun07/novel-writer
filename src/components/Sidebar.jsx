@@ -1,4 +1,4 @@
-import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText, Calendar, BarChart3, History } from 'lucide-react';
+import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText, Calendar, BarChart3, History, Layout } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '../lib/utils';
 import dynamic from 'next/dynamic';
@@ -9,7 +9,7 @@ const EmptyState = dynamic(() => import('./EmptyState'), {
 })
 
 export default function Sidebar() {
- const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, setShowTimelineModal, setShowVersionHistoryModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates, timeline, writingStats } = useAppStore();
+ const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, setShowTimelineModal, setShowVersionHistoryModal, setShowToolsModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates, timeline, writingStats } = useAppStore();
  const handleAddChapter = () => {
  const newChapter = {
  id: `${Date.now()}`,
@@ -75,9 +75,38 @@ export default function Sidebar() {
                 onClick: handleAddChapter
               }}
             />) : (<div className="space-y-1 max-h-64 overflow-y-auto">
- {chapters.map((chapter, index) => (<div key={chapter.id} className={cn("group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors", activeChapterId === chapter.id
+ {chapters.map((chapter, index) => (<div 
+   key={chapter.id} 
+   draggable
+   onDragStart={(e) => {
+     e.dataTransfer.setData('text/plain', chapter.id);
+     e.dataTransfer.effectAllowed = 'move';
+     e.currentTarget.classList.add('opacity-50');
+   }}
+   onDragEnd={(e) => {
+     e.currentTarget.classList.remove('opacity-50');
+   }}
+   onDragOver={(e) => {
+     e.preventDefault();
+     e.dataTransfer.dropEffect = 'move';
+   }}
+   onDrop={(e) => {
+     e.preventDefault();
+     const draggedId = e.dataTransfer.getData('text/plain');
+     const dropTargetId = chapter.id;
+     if (draggedId !== dropTargetId) {
+       const newChapters = [...chapters];
+       const draggedIndex = newChapters.findIndex(c => c.id === draggedId);
+       const dropIndex = newChapters.findIndex(c => c.id === dropTargetId);
+       const [removed] = newChapters.splice(draggedIndex, 1);
+       newChapters.splice(dropIndex, 0, removed);
+       useAppStore.getState().setChapters(newChapters);
+     }
+   }}
+   className={cn("group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all", activeChapterId === chapter.id
  ? "bg-bg-sidebar-hover border-l-2 border-primary"
  : "hover:bg-bg-sidebar-hover")} onClick={() => setActiveChapterId(chapter.id)}>
+ <span className="cursor-move text-text-muted opacity-0 group-hover:opacity-100" title="拖拽排序">⋮⋮</span>
  <span className="text-xs text-text-muted w-6">{index + 1}</span>
  <span className={cn("flex-1 text-sm truncate", chapter.isCompleted ? "line-through text-text-muted" : "")}>
  {chapter.title}
@@ -164,6 +193,15 @@ export default function Sidebar() {
  {/* 统计和历史 */}
  <div className="space-y-2 mt-6 pt-4 border-t border-border-dark">
  <h3 className="text-sm font-medium text-text-muted">数据中心</h3>
+ <button onClick={() => setShowToolsModal(true)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors">
+ <div className="flex items-center gap-3">
+ <Layout className="w-5 h-5 text-primary"/>
+ <div className="text-left">
+ <p className="text-sm font-medium">创作工具</p>
+ <p className="text-xs text-text-muted mt-0.5">大纲/场景/关系图</p>
+ </div>
+ </div>
+ </button>
  <button onClick={() => setShowVersionHistoryModal(true)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors">
  <div className="flex items-center gap-3">
  <History className="w-5 h-5 text-primary"/>

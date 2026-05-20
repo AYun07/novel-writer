@@ -2,9 +2,10 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 export function useAutoSave(interval = 300000) {
-  const { chapters, outline, characters, worldSettings, novelInfo, setShowToast } = useAppStore()
+  const { chapters, outline, characters, worldSettings, novelInfo, setShowToast, addVersionHistory } = useAppStore()
   const lastSaveRef = useRef(null)
   const autoSaveEnabledRef = useRef(true)
+  const lastVersionSaveRef = useRef(0)
 
   const saveToLocalStorage = useCallback(() => {
     const currentData = {
@@ -28,11 +29,23 @@ export function useAutoSave(interval = 300000) {
         localStorage.setItem('integrated-author-settings', JSON.stringify(settings))
         
         console.log('自动保存成功:', new Date().toLocaleTimeString())
+        
+        // 每10次自动保存创建一次版本快照
+        lastVersionSaveRef.current++
+        if (lastVersionSaveRef.current >= 10) {
+          addVersionHistory({
+            type: 'auto',
+            title: `自动保存 ${new Date().toLocaleString('zh-CN')}`,
+            chapters: JSON.parse(dataString).chapters,
+            wordCount: JSON.parse(dataString).chapters.reduce((sum, ch) => sum + ((ch.content || '').replace(/<[^>]*>/g, '').length), 0)
+          })
+          lastVersionSaveRef.current = 0
+        }
       } catch (error) {
         console.error('自动保存失败:', error)
       }
     }
-  }, [chapters, outline, characters, worldSettings, novelInfo])
+  }, [chapters, outline, characters, worldSettings, novelInfo, addVersionHistory])
 
   const loadFromLocalStorage = useCallback(() => {
     try {

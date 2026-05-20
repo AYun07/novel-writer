@@ -89,6 +89,11 @@ const WritingHeatmap = dynamic(() => import('../components/WritingHeatmap'), {
   ssr: false
 })
 
+const ToolsView = dynamic(() => import('../components/ToolsView'), {
+  loading: () => null,
+  ssr: false
+})
+
 const StatsPanel = dynamic(() => import('../components/StatsPanel'), {
   loading: () => <div className="w-80 bg-bg-secondary animate-pulse" />,
   ssr: false
@@ -120,6 +125,7 @@ export default function Home() {
     showLoginModal,
     showTimelineModal,
     showVersionHistoryModal,
+    showToolsModal,
     setChapters,
     setShowToast,
     setSidebarOpen,
@@ -343,6 +349,15 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/50" onClick={() => useAppStore.getState().setShowVersionHistoryModal(false)} />
           <div className="relative bg-bg-primary rounded-xl shadow-lg w-full max-w-5xl max-h-[90vh] overflow-hidden">
             <VersionHistory />
+          </div>
+        </div>
+      )}
+
+      {showToolsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => useAppStore.getState().setShowToolsModal(false)} />
+          <div className="relative bg-bg-primary rounded-xl shadow-lg w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <ToolsView />
           </div>
         </div>
       )}
