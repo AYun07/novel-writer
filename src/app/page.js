@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useAppStore } from '../store/useAppStore'
 import { onAuthStateChangedHandler } from '../lib/firebase'
-import { Menu, Sparkles, X } from 'lucide-react'
+import { Menu, Sparkles, X, Search } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
@@ -89,6 +89,11 @@ const KeyboardShortcutsHelp = dynamic(() => import('../components/KeyboardShortc
   ssr: false
 })
 
+const GlobalSearch = dynamic(() => import('../components/GlobalSearch'), {
+  loading: () => null,
+  ssr: false
+})
+
 const Keyboard = require('lucide-react').Keyboard
 
 export default function Home() {
@@ -106,9 +111,21 @@ export default function Home() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
 
   useAutoSave(300000)
   const { showShortcutsHelp, setShowShortcutsHelp, shortcuts } = useKeyboardShortcuts()
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setShowGlobalSearch(true)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   const activeChapter = chapters?.length > 0 ? chapters.find(ch => ch.id === activeChapterId) : null
 
@@ -243,6 +260,13 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-4">
               <button
+                onClick={() => setShowGlobalSearch(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
+                title="搜索 (Ctrl+F)"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+              <button
                 onClick={() => setShowShortcutsHelp(true)}
                 className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
                 title="键盘快捷键"
@@ -291,6 +315,10 @@ export default function Home() {
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
         shortcuts={shortcuts}
+      />
+      <GlobalSearch
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
       />
       <Toast />
     </div>

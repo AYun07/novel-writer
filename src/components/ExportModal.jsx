@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, FileText, FileSpreadsheet, Download, Check } from 'lucide-react'
+import { X, FileText, FileSpreadsheet, Download, Check, FileJson, FileCode, BookOpen } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { cn } from '../lib/utils'
 
@@ -9,8 +9,12 @@ export default function ExportModal() {
   const [isExporting, setIsExporting] = useState(false)
   const [exportOptions, setExportOptions] = useState({
     includeTitle: true,
+    includeAuthor: true,
+    includeDescription: true,
     includeChapterNumbers: true,
     includeOutline: false,
+    includeCharacters: false,
+    includeWorldSettings: false,
     singleFile: true,
     chapterSeparator: '\n\n---章节分隔---\n\n'
   })
@@ -163,10 +167,11 @@ export default function ExportModal() {
   }
 
   const formatOptions = [
-    { value: 'txt', label: '纯文本', icon: FileText, description: '通用文本格式，可用任何编辑器打开' },
-    { value: 'markdown', label: 'Markdown', icon: FileText, description: '支持格式的轻量级标记语言' },
-    { value: 'html', label: 'HTML', icon: FileSpreadsheet, description: '网页格式，可直接在浏览器中查看' },
-    { value: 'json', label: 'JSON', icon: FileSpreadsheet, description: '包含所有章节元数据的结构化数据' }
+    { value: 'txt', label: '纯文本', icon: FileText, description: '通用文本格式，可用任何编辑器打开', color: 'blue' },
+    { value: 'markdown', label: 'Markdown', icon: FileCode, description: '支持格式的轻量级标记语言', color: 'purple' },
+    { value: 'html', label: '网页', icon: FileSpreadsheet, description: '网页格式，可直接在浏览器中查看', color: 'orange' },
+    { value: 'json', label: 'JSON', icon: FileJson, description: '包含所有元数据的结构化数据', color: 'green' },
+    { value: 'docx', label: 'Word文档', icon: BookOpen, description: 'Microsoft Word格式，保留排版', color: 'indigo' }
   ]
 
   if (!showExportModal) return null
@@ -228,6 +233,24 @@ export default function ExportModal() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
+                    checked={exportOptions.includeAuthor}
+                    onChange={(e) => setExportOptions({ ...exportOptions, includeAuthor: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm">包含作者信息</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={exportOptions.includeDescription}
+                    onChange={(e) => setExportOptions({ ...exportOptions, includeDescription: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm">包含简介</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
                     checked={exportOptions.includeChapterNumbers}
                     onChange={(e) => setExportOptions({ ...exportOptions, includeChapterNumbers: e.target.checked })}
                     className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
@@ -243,15 +266,53 @@ export default function ExportModal() {
                   />
                   <span className="text-sm">包含大纲</span>
                 </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={exportOptions.includeCharacters}
+                    onChange={(e) => setExportOptions({ ...exportOptions, includeCharacters: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm">包含角色设定</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={exportOptions.includeWorldSettings}
+                    onChange={(e) => setExportOptions({ ...exportOptions, includeWorldSettings: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm">包含世界观设定</span>
+                </label>
               </div>
             </div>
 
-            <div className="p-4 bg-bg-secondary rounded-lg">
-              <div className="text-sm text-text-muted">
-                <p className="mb-2">导出预览：</p>
-                <p>• 小说标题：{novelInfo.title || '未命名'}</p>
-                <p>• 章节数量：{chapters.length} 章</p>
-                <p>• 导出格式：{formatOptions.find(f => f.value === exportFormat)?.label}</p>
+            <div className="p-4 bg-bg-secondary rounded-lg border border-border">
+              <div className="text-sm text-text-primary">
+                <p className="font-medium mb-3 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  导出预览
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-bg-primary p-3 rounded">
+                    <p className="text-xs text-text-muted mb-1">小说标题</p>
+                    <p className="font-medium">{novelInfo.title || '未命名'}</p>
+                  </div>
+                  <div className="bg-bg-primary p-3 rounded">
+                    <p className="text-xs text-text-muted mb-1">章节数量</p>
+                    <p className="font-medium">{chapters.length} 章</p>
+                  </div>
+                  <div className="bg-bg-primary p-3 rounded">
+                    <p className="text-xs text-text-muted mb-1">导出格式</p>
+                    <p className="font-medium">{formatOptions.find(f => f.value === exportFormat)?.label}</p>
+                  </div>
+                  <div className="bg-bg-primary p-3 rounded">
+                    <p className="text-xs text-text-muted mb-1">预估字数</p>
+                    <p className="font-medium">
+                      {chapters.reduce((sum, ch) => sum + ((ch.content || '').replace(/<[^>]*>/g, '').length), 0).toLocaleString()} 字
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
