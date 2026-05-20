@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useAppStore } from '../store/useAppStore'
 import { onAuthStateChangedHandler } from '../lib/firebase'
-import { Menu, Sparkles, X, Search } from 'lucide-react'
+import { Menu, Sparkles, X, Search, BookOpen, Trophy, Clock, FolderOpen } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
@@ -94,6 +94,26 @@ const ToolsView = dynamic(() => import('../components/ToolsView'), {
   ssr: false
 })
 
+const ProjectSelector = dynamic(() => import('../components/ProjectSelector'), {
+  loading: () => null,
+  ssr: false
+})
+
+const Achievements = dynamic(() => import('../components/Achievements'), {
+  loading: () => null,
+  ssr: false
+})
+
+const PomodoroTimer = dynamic(() => import('../components/PomodoroTimer'), {
+  loading: () => null,
+  ssr: false
+})
+
+const ReadingModes = dynamic(() => import('../components/ReadingModes'), {
+  loading: () => null,
+  ssr: false
+})
+
 const StatsPanel = dynamic(() => import('../components/StatsPanel'), {
   loading: () => <div className="w-80 bg-bg-secondary animate-pulse" />,
   ssr: false
@@ -126,10 +146,17 @@ export default function Home() {
     showTimelineModal,
     showVersionHistoryModal,
     showToolsModal,
+    showProjectSelector,
+    showAchievements,
+    showPomodoro,
+    showReadingMode,
+    showFocusMode,
     setChapters,
     setShowToast,
     setSidebarOpen,
-    setAiSidebarOpen
+    setAiSidebarOpen,
+    activeProject,
+    achievements
   } = useAppStore()
 
   const [isLoading, setIsLoading] = useState(true)
@@ -182,6 +209,8 @@ export default function Home() {
 
     return () => unsubscribe()
   }, [])
+
+  const unlockedCount = achievements?.filter(a => a.unlocked).length || 0
 
   if (isLoading) {
     return (
@@ -273,15 +302,43 @@ export default function Home() {
           "hidden lg:block"
         )}>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-text-primary">
-                {activeChapter?.title || '未命名章节'}
-              </h1>
-              <p className="text-sm text-text-muted mt-1">
-                {chapters?.length || 0} 个章节
-              </p>
-            </div>
             <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-xl font-semibold text-text-primary">
+                  {activeChapter?.title || '未命名章节'}
+                </h1>
+                <p className="text-sm text-text-muted mt-1">
+                  {chapters?.length || 0} 个章节 · {activeProject?.name || '默认项目'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => useAppStore.getState().setShowPomodoro(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
+                title="番茄钟"
+              >
+                <Clock className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => useAppStore.getState().setShowAchievements(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary relative"
+                title="成就"
+              >
+                <Trophy className="w-5 h-5" />
+                {unlockedCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {unlockedCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => useAppStore.getState().setShowProjectSelector(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
+                title="项目"
+              >
+                <FolderOpen className="w-5 h-5" />
+              </button>
               <button
                 onClick={() => setShowGlobalSearch(true)}
                 className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
@@ -295,6 +352,13 @@ export default function Home() {
                 title="键盘快捷键"
               >
                 <Keyboard className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => useAppStore.getState().setShowReadingMode(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
+                title="阅读模式"
+              >
+                <BookOpen className="w-5 h-5" />
               </button>
               <span className="text-sm text-text-muted">
                 字数: {activeChapter?.content ? activeChapter.content.replace(/<[^>]*>/g, '').length : 0}
@@ -335,6 +399,10 @@ export default function Home() {
       <SessionManager />
       <TemplateManager />
       
+      {showProjectSelector && (
+        <ProjectSelector onClose={() => useAppStore.getState().setShowProjectSelector(false)} />
+      )}
+
       {showTimelineModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => useAppStore.getState().setShowTimelineModal(false)} />
@@ -360,6 +428,22 @@ export default function Home() {
             <ToolsView />
           </div>
         </div>
+      )}
+
+      {showAchievements && (
+        <Achievements onClose={() => useAppStore.getState().setShowAchievements(false)} />
+      )}
+
+      {showPomodoro && (
+        <PomodoroTimer onClose={() => useAppStore.getState().setShowPomodoro(false)} />
+      )}
+
+      {showReadingMode && ReadingModes && ReadingModes.ReadingMode && (
+        <ReadingModes.ReadingMode onClose={() => useAppStore.getState().setShowReadingMode(false)} />
+      )}
+
+      {showFocusMode && ReadingModes && ReadingModes.FocusMode && (
+        <ReadingModes.FocusMode onClose={() => useAppStore.getState().setShowFocusMode(false)} />
       )}
       
       <KeyboardShortcutsHelp
