@@ -2,6 +2,17 @@ import { useState } from 'react'
 import { X, User, Plus, Trash2, Edit3, Save, ChevronDown, ChevronRight, UserCircle } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { cn } from '../lib/utils'
+import dynamic from 'next/dynamic'
+
+const EmptyState = dynamic(() => import('./EmptyState'), {
+  ssr: false,
+  loading: () => <div className="py-12"><div className="animate-pulse space-y-3"><div className="h-24 bg-bg-secondary rounded-lg"></div><div className="h-20 bg-bg-secondary rounded-lg"></div></div></div>
+})
+
+const AvatarPicker = dynamic(() => import('./AvatarPicker'), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-bg-secondary rounded-lg animate-pulse"></div>
+})
 
 export default function CharacterManager() {
   const { 
@@ -21,6 +32,7 @@ export default function CharacterManager() {
     role: 'main',
     age: '',
     gender: '',
+    avatar: '',
     appearance: '',
     personality: '',
     background: '',
@@ -35,6 +47,7 @@ export default function CharacterManager() {
       role: 'main',
       age: '',
       gender: '',
+      avatar: '',
       appearance: '',
       personality: '',
       background: '',
@@ -68,6 +81,7 @@ export default function CharacterManager() {
       role: character.role || 'main',
       age: character.age || '',
       gender: character.gender || '',
+      avatar: character.avatar || '',
       appearance: character.appearance || '',
       personality: character.personality || '',
       background: character.background || '',
@@ -133,11 +147,14 @@ export default function CharacterManager() {
               </button>
 
               {characters.length === 0 ? (
-                <div className="text-center py-12 text-text-muted">
-                  <UserCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">暂无角色</p>
-                  <p className="text-xs mt-1">点击上方按钮添加角色</p>
-                </div>
+                <EmptyState
+                  type="characters"
+                  className="py-8"
+                  action={{
+                    label: '添加角色',
+                    onClick: resetForm
+                  }}
+                />
               ) : (
                 characters.map((character) => (
                   <div
@@ -241,6 +258,11 @@ export default function CharacterManager() {
                   </select>
                 </div>
               </div>
+
+              <AvatarPicker
+                value={formData.avatar}
+                onChange={(avatar) => setFormData({ ...formData, avatar })}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

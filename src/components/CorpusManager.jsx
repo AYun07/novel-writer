@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { X, Database, Plus, Trash2, Edit3, Save, Search, FileText, Copy, Check } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import dynamic from 'next/dynamic'
+
+const EmptyState = dynamic(() => import('./EmptyState'), {
+  ssr: false,
+  loading: () => <div className="py-12"><div className="animate-pulse space-y-3"><div className="h-20 bg-bg-secondary rounded-lg"></div><div className="h-24 bg-bg-secondary rounded-lg"></div></div></div>
+})
 
 export default function CorpusManager() {
   const { 
@@ -174,15 +180,16 @@ export default function CorpusManager() {
               </button>
 
               {filteredCorpus.length === 0 ? (
-                <div className="text-center py-12 text-text-muted">
-                  <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">
-                    {searchQuery ? '未找到匹配的语料' : '暂无语料'}
-                  </p>
-                  <p className="text-xs mt-1">
-                    {searchQuery ? '尝试其他搜索词' : '点击上方按钮添加语料'}
-                  </p>
-                </div>
+                <EmptyState
+                  type="folder"
+                  className="py-8"
+                  title={searchQuery ? '未找到匹配的语料' : '暂无语料'}
+                  description={searchQuery ? '尝试其他搜索词' : '添加语料来提升AI创作质量'}
+                  action={!searchQuery ? {
+                    label: '添加语料',
+                    onClick: resetForm
+                  } : undefined}
+                />
               ) : (
                 filteredCorpus.map((item) => (
                   <div

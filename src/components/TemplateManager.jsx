@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { X, FileText, Plus, Trash2, Edit3, Save, Copy, Check, FolderOpen } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { cn } from '../lib/utils'
+import dynamic from 'next/dynamic'
+
+const EmptyState = dynamic(() => import('./EmptyState'), {
+  ssr: false,
+  loading: () => <div className="py-12"><div className="animate-pulse space-y-3"><div className="h-20 bg-bg-secondary rounded-lg"></div><div className="h-24 bg-bg-secondary rounded-lg"></div></div></div>
+})
 
 export default function TemplateManager() {
   const { 
@@ -376,11 +382,15 @@ export default function TemplateManager() {
               </button>
 
               {templates.length === 0 ? (
-                <div className="text-center py-12 text-text-muted">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">暂无模板</p>
-                  <p className="text-xs mt-1">点击上方按钮创建或加载模板</p>
-                </div>
+                <EmptyState
+                  type="folder"
+                  className="py-8"
+                  description="开始创作前，先创建一些模板吧"
+                  action={{
+                    label: '创建模板',
+                    onClick: resetForm
+                  }}
+                />
               ) : (
                 filteredTemplates.map((template, index) => (
                   <div

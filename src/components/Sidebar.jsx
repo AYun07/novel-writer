@@ -1,6 +1,13 @@
 import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '../lib/utils';
+import dynamic from 'next/dynamic';
+
+const EmptyState = dynamic(() => import('./EmptyState'), {
+  ssr: false,
+  loading: () => <div className="py-8"><div className="animate-pulse space-y-3"><div className="h-20 bg-bg-sidebar-hover rounded-lg"></div><div className="h-16 bg-bg-sidebar-hover rounded-lg"></div></div></div>
+})
+
 export default function Sidebar() {
  const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates } = useAppStore();
  const handleAddChapter = () => {
@@ -60,13 +67,14 @@ export default function Sidebar() {
  </button>
  </div>
 
- {chapters.length === 0 ? (<div className="text-center py-8 text-text-muted">
- <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50"/>
- <p className="text-sm">暂无章节</p>
- <button onClick={handleAddChapter} className="mt-3 px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-hover transition-colors">
- 创建章节
- </button>
- </div>) : (<div className="space-y-1 max-h-64 overflow-y-auto">
+ {chapters.length === 0 ? (<EmptyState
+              type="chapters"
+              className="py-4"
+              action={{
+                label: '创建章节',
+                onClick: handleAddChapter
+              }}
+            />) : (<div className="space-y-1 max-h-64 overflow-y-auto">
  {chapters.map((chapter, index) => (<div key={chapter.id} className={cn("group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors", activeChapterId === chapter.id
  ? "bg-bg-sidebar-hover border-l-2 border-primary"
  : "hover:bg-bg-sidebar-hover")} onClick={() => setActiveChapterId(chapter.id)}>

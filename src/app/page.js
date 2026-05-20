@@ -6,7 +6,8 @@ import { useAppStore } from '../store/useAppStore'
 import { onAuthStateChangedHandler } from '../lib/firebase'
 import { Menu, Sparkles, X } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { useAutoSave, useKeyboardShortcuts } from '../hooks/useAutoSave'
+import { useAutoSave } from '../hooks/useAutoSave'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 
 const Sidebar = dynamic(() => import('../components/Sidebar'), {
   loading: () => <div className="w-72 bg-bg-sidebar h-screen animate-pulse" />,
@@ -83,6 +84,13 @@ const Toast = dynamic(() => import('../components/Toast'), {
   ssr: false
 })
 
+const KeyboardShortcutsHelp = dynamic(() => import('../components/KeyboardShortcutsHelp'), {
+  loading: () => null,
+  ssr: false
+})
+
+const Keyboard = require('lucide-react').Keyboard
+
 export default function Home() {
   const { 
     chapters = [], 
@@ -100,7 +108,7 @@ export default function Home() {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   useAutoSave(300000)
-  useKeyboardShortcuts()
+  const { showShortcutsHelp, setShowShortcutsHelp, shortcuts } = useKeyboardShortcuts()
 
   const activeChapter = chapters?.length > 0 ? chapters.find(ch => ch.id === activeChapterId) : null
 
@@ -234,6 +242,13 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors text-text-muted hover:text-text-primary"
+                title="键盘快捷键"
+              >
+                <Keyboard className="w-5 h-5" />
+              </button>
               <span className="text-sm text-text-muted">
                 字数: {activeChapter?.content ? activeChapter.content.replace(/<[^>]*>/g, '').length : 0}
               </span>
@@ -272,6 +287,11 @@ export default function Home() {
       <CorpusManager />
       <SessionManager />
       <TemplateManager />
+      <KeyboardShortcutsHelp
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+        shortcuts={shortcuts}
+      />
       <Toast />
     </div>
   )

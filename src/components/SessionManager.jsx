@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { X, MessageSquare, Plus, Trash2, Clock, Send } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { cn } from '../lib/utils'
+import dynamic from 'next/dynamic'
+
+const EmptyState = dynamic(() => import('./EmptyState'), {
+  ssr: false,
+  loading: () => <div className="py-12"><div className="animate-pulse space-y-3"><div className="h-20 bg-bg-secondary rounded-lg"></div><div className="h-24 bg-bg-secondary rounded-lg"></div></div></div>
+})
 
 export default function SessionManager() {
   const { 
@@ -133,11 +139,16 @@ export default function SessionManager() {
               </button>
 
               {sessions.length === 0 ? (
-                <div className="text-center py-12 text-text-muted">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">暂无对话</p>
-                  <p className="text-xs mt-1">点击上方按钮创建新对话</p>
-                </div>
+                <EmptyState
+                  type="chapters"
+                  className="py-8"
+                  title="暂无对话"
+                  description="创建对话来整理你的创作思路"
+                  action={{
+                    label: '创建对话',
+                    onClick: createNewSession
+                  }}
+                />
               ) : (
                 sessions.map((session) => (
                   <div
