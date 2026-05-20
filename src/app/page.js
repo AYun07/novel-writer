@@ -109,7 +109,12 @@ const PomodoroTimer = dynamic(() => import('../components/PomodoroTimer'), {
   ssr: false
 })
 
-const ReadingModes = dynamic(() => import('../components/ReadingModes'), {
+const ReadingMode = dynamic(() => import('../components/ReadingModes').then(mod => ({ default: mod.ReadingMode })), {
+  loading: () => null,
+  ssr: false
+})
+
+const FocusMode = dynamic(() => import('../components/ReadingModes').then(mod => ({ default: mod.FocusMode })), {
   loading: () => null,
   ssr: false
 })
@@ -438,12 +443,12 @@ export default function Home() {
         <PomodoroTimer onClose={() => useAppStore.getState().setShowPomodoro(false)} />
       )}
 
-      {showReadingMode && ReadingModes && ReadingModes.ReadingMode && (
-        <ReadingModes.ReadingMode onClose={() => useAppStore.getState().setShowReadingMode(false)} />
+      {showReadingMode && ReadingMode && (
+        <ReadingMode onClose={() => useAppStore.getState().setShowReadingMode(false)} />
       )}
 
-      {showFocusMode && ReadingModes && ReadingModes.FocusMode && (
-        <ReadingModes.FocusMode onClose={() => useAppStore.getState().setShowFocusMode(false)} />
+      {showFocusMode && FocusMode && (
+        <FocusMode onClose={() => useAppStore.getState().setShowFocusMode(false)} />
       )}
       
       <KeyboardShortcutsHelp

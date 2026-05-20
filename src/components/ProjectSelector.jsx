@@ -62,7 +62,7 @@ export function ProjectSelector({ onClose }) {
 
   const openProject = (project) => {
     setActiveProject(project)
-    setShowToast(`已打开项目: ${project.name}')
+    setShowToast(`已打开项目: ${project.name}`)
     onClose()
   }
 
@@ -148,10 +148,10 @@ export function ProjectSelector({ onClose }) {
 
                 return (
                   <div
-                    key={project.id}
-                    className={`p-4 rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer group"
-                    onClick={() => openProject(project)}
-                  >
+                  key={project.id}
+                  className={`p-4 rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer group ${activeProject?.id === project.id ? 'border-primary bg-primary/5' : ''}`}
+                  onClick={() => openProject(project)}
+                >
                     <div className="flex items-start justify-between mb-3">
                       <div 
                         className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"

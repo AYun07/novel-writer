@@ -350,6 +350,19 @@ const store = create(
       setPomodoroTime: (time) => set({ pomodoroTime: time }),
       isPomodoroRunning: false,
       setIsPomodoroRunning: (running) => set({ isPomodoroRunning: running }),
+      
+      // UI模态框显示状态
+      showAchievements: false,
+      setShowAchievements: (show) => set({ showAchievements: show }),
+      
+      showPomodoro: false,
+      setShowPomodoro: (show) => set({ showPomodoro: show }),
+      
+      showReadingMode: false,
+      setShowReadingMode: (show) => set({ showReadingMode: !!show }),
+      
+      showFocusMode: false,
+      setShowFocusMode: (show) => set({ showFocusMode: !!show }),
 
       // 笔记系统
       notes: [],
