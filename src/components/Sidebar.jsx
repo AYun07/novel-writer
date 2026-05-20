@@ -1,4 +1,4 @@
-import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText } from 'lucide-react';
+import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText, Calendar } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '../lib/utils';
 import dynamic from 'next/dynamic';
@@ -9,7 +9,7 @@ const EmptyState = dynamic(() => import('./EmptyState'), {
 })
 
 export default function Sidebar() {
- const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates } = useAppStore();
+ const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, setShowTimelineModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates, timeline } = useAppStore();
  const handleAddChapter = () => {
  const newChapter = {
  id: `${Date.now()}`,
@@ -145,6 +145,15 @@ export default function Sidebar() {
  <div className="text-left">
  <p className="text-sm font-medium">模板管理</p>
  <p className="text-xs text-text-muted mt-0.5">{templates.length} 个模板</p>
+ </div>
+ </div>
+ </button>
+ <button onClick={() => setShowTimelineModal(true)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors">
+ <div className="flex items-center gap-3">
+ <Calendar className="w-5 h-5 text-primary"/>
+ <div className="text-left">
+ <p className="text-sm font-medium">时间轴</p>
+ <p className="text-xs text-text-muted mt-0.5">{timeline?.length || 0} 个事件</p>
  </div>
  </div>
  </button>

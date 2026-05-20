@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, User, Plus, Trash2, Edit3, Save, ChevronDown, ChevronRight, UserCircle } from 'lucide-react'
+import { X, User, Plus, Trash2, Edit3, Save, ChevronDown, ChevronRight, UserCircle, Users } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { cn } from '../lib/utils'
 import dynamic from 'next/dynamic'
@@ -12,6 +12,11 @@ const EmptyState = dynamic(() => import('./EmptyState'), {
 const AvatarPicker = dynamic(() => import('./AvatarPicker'), {
   ssr: false,
   loading: () => <div className="h-32 bg-bg-secondary rounded-lg animate-pulse"></div>
+})
+
+const CharacterRelationsGraph = dynamic(() => import('./CharacterRelationsGraph'), {
+  ssr: false,
+  loading: () => <div className="h-full flex items-center justify-center"><div className="animate-pulse"><div className="w-32 h-32 rounded-full bg-primary/20"></div></div></div>
 })
 
 export default function CharacterManager() {
@@ -27,6 +32,7 @@ export default function CharacterManager() {
 
   const [editingId, setEditingId] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [viewMode, setViewMode] = useState('list') // list or graph
   const [formData, setFormData] = useState({
     name: '',
     role: 'main',
@@ -126,17 +132,45 @@ export default function CharacterManager() {
             <h2 className="text-lg font-semibold">角色设定管理</h2>
             <span className="text-sm text-text-muted">({characters.length} 个角色)</span>
           </div>
-          <button 
-            onClick={() => setShowCharacterModal(false)}
-            className="p-2 hover:bg-bg-tertiary rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-bg-secondary rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  "px-3 py-1 rounded-md text-sm transition-colors",
+                  viewMode === 'list' ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                列表
+              </button>
+              <button
+                onClick={() => setViewMode('graph')}
+                className={cn(
+                  "px-3 py-1 rounded-md text-sm transition-colors",
+                  viewMode === 'graph' ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                关系图
+              </button>
+            </div>
+            <button 
+              onClick={() => setShowCharacterModal(false)}
+              className="p-2 hover:bg-bg-tertiary rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex h-[calc(90vh-120px)]">
-          {/* 角色列表 */}
-          <div className="w-80 border-r border-border overflow-y-auto">
+          {viewMode === 'graph' ? (
+            <div className="flex-1">
+              <CharacterRelationsGraph />
+            </div>
+          ) : (
+            <>
+              {/* 角色列表 */}
+              <div className="w-80 border-r border-border overflow-y-auto">
             <div className="p-4 space-y-2">
               <button
                 onClick={resetForm}
@@ -373,6 +407,8 @@ export default function CharacterManager() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

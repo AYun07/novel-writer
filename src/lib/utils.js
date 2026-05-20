@@ -423,3 +423,197 @@ export const logger = {
   warn: (msg, data) => log('warning', msg, data),
   error: (msg, data) => log('error', msg, data)
 }
+
+// 敏感词检测功能
+const defaultSensitiveWords = [
+  '违规', '违法', '赌博', '色情', '诈骗', '毒品', '枪支',
+  '违禁', '暴力', '恐怖', '反动', '分裂', '邪教', '迷信',
+  '侮辱', '诽谤', '辱骂', '脏话', '黄赌毒'
+]
+
+export class SensitiveWordFilter {
+  constructor(words = []) {
+    this.words = [...defaultSensitiveWords, ...words]
+    this.trie = null
+    this.buildTrie()
+  }
+
+  buildTrie() {
+    const root = {}
+    for (const word of this.words) {
+      let node = root
+      for (const char of word) {
+        if (!node[char]) {
+          node[char] = {}
+        }
+        node = node[char]
+      }
+      node['isEnd'] = true
+    }
+    this.trie = root
+  }
+
+  addWords(words) {
+    this.words = [...new Set([...this.words, ...words])]
+    this.buildTrie()
+  }
+
+  removeWord(word) {
+    this.words = this.words.filter(w => w !== word)
+    this.buildTrie()
+  }
+
+  detect(text) {
+    if (!text || !this.trie) return []
+    const results = []
+    let i = 0
+    while (i < text.length) {
+      let node = this.trie
+      let j = i
+      let match = null
+      while (j < text.length && node[text[j]]) {
+        node = node[text[j]]
+        j++
+        if (node['isEnd']) {
+          match = text.substring(i, j)
+        }
+      }
+      if (match) {
+        results.push({
+          word: match,
+          start: i,
+          end: i + match.length
+        })
+        i = i + match.length
+      } else {
+        i++
+      }
+    }
+    return results
+  }
+
+  replace(text, replacement = '*') {
+    const results = this.detect(text)
+    if (results.length === 0) return text
+    let result = text
+    for (let i = results.length - 1; i >= 0; i--) {
+      const match = results[i]
+      const replaceStr = replacement.repeat(match.word.length)
+      result = result.substring(0, match.start) + replaceStr + result.substring(match.end)
+    }
+    return result
+  }
+
+  highlight(text, className = 'bg-yellow-200 text-red-600') {
+    const results = this.detect(text)
+    if (results.length === 0) return text
+    let result = text
+    for (let i = results.length - 1; i >= 0; i--) {
+      const match = results[i]
+      result = result.substring(0, match.start) + 
+        `<span class="${className}">${match.word}</span>` + 
+        result.substring(match.end)
+    }
+    return result
+  }
+}
+
+export const sensitiveWordFilter = new SensitiveWordFilter()
+
+// 文章质量评分功能
+export function analyzeTextQuality(text) {
+  if (!text) return { score: 0, details: {} }
+  const plainText = stripHtml(text)
+  
+  let score = 0
+  const details = {}
+  
+  // 字数统计（20分）
+  const wordCount = plainText.length
+  details.wordCount = wordCount
+  if (wordCount >= 1000) score += 20
+  else if (wordCount >= 500) score += 15
+  else if (wordCount >= 200) score += 10
+  else if (wordCount >= 100) score += 5
+  else score += 0
+  
+  // 段落结构（15分）
+  const paragraphs = plainText.split(/\n\s*\n/).filter(p => p.trim().length > 0)
+  details.paragraphCount = paragraphs.length
+  if (paragraphs.length >= 10) score += 15
+  else if (paragraphs.length >= 5) score += 10
+  else if (paragraphs.length >= 2) score += 5
+  else score += 0
+  
+  // 段落长度分布（15分）
+  const avgParagraphLength = paragraphs.length > 0 
+    ? paragraphs.reduce((sum, p) => sum + p.length, 0) / paragraphs.length 
+    : 0
+  details.avgParagraphLength = Math.round(avgParagraphLength)
+  if (avgParagraphLength >= 100 && avgParagraphLength <= 300) score += 15
+  else if (avgParagraphLength >= 50 && avgParagraphLength <= 500) score += 10
+  else if (avgParagraphLength >= 20) score += 5
+  else score += 0
+  
+  // 标点符号多样性（10分）
+  const punctuation = plainText.match(/[，。！？；：、（）""''【】《》]/g) || []
+  const uniquePunctuation = new Set(punctuation)
+  details.punctuationDiversity = uniquePunctuation.size
+  if (uniquePunctuation.size >= 6) score += 10
+  else if (uniquePunctuation.size >= 4) score += 7
+  else if (uniquePunctuation.size >= 2) score += 4
+  else score += 0
+  
+  // 句子长度变化（15分）
+  const sentences = plainText.split(/[。！？]/).filter(s => s.trim().length > 0)
+  if (sentences.length > 0) {
+    const sentenceLengths = sentences.map(s => s.length)
+    const avgSentenceLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentences.length
+    const variance = sentenceLengths.reduce((sum, len) => sum + Math.pow(len - avgSentenceLength, 2), 0) / sentences.length
+    details.avgSentenceLength = Math.round(avgSentenceLength)
+    details.sentenceVariance = Math.round(variance)
+    
+    if (variance >= 1000) score += 15
+    else if (variance >= 500) score += 10
+    else if (variance >= 100) score += 5
+    else score += 0
+  }
+  
+  // 中文汉字比例（10分）
+  const chineseChars = (plainText.match(/[\u4e00-\u9fa5]/g) || []).length
+  const totalChars = plainText.length
+  const chineseRatio = totalChars > 0 ? chineseChars / totalChars : 0
+  details.chineseRatio = Math.round(chineseRatio * 100)
+  if (chineseRatio >= 0.9) score += 10
+  else if (chineseRatio >= 0.7) score += 7
+  else if (chineseRatio >= 0.5) score += 4
+  else score += 0
+  
+  // 重复词检测（15分）
+  const words = plainText.match(/[\u4e00-\u9fa5]{2,}/g) || []
+  const wordCountMap = {}
+  words.forEach(word => {
+    wordCountMap[word] = (wordCountMap[word] || 0) + 1
+  })
+  const repeatedWords = Object.entries(wordCountMap)
+    .filter(([word, count]) => count >= 5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+  details.repeatedWords = repeatedWords
+  if (repeatedWords.length === 0) score += 15
+  else if (repeatedWords.length <= 2) score += 10
+  else if (repeatedWords.length <= 5) score += 5
+  else score += 0
+  
+  // 敏感词检测（扣分）
+  const sensitiveMatches = sensitiveWordFilter.detect(plainText)
+  details.sensitiveWordCount = sensitiveMatches.length
+  if (sensitiveMatches.length > 0) {
+    score = Math.max(0, score - sensitiveMatches.length * 5)
+  }
+  
+  details.score = score
+  details.level = score >= 80 ? '优秀' : score >= 60 ? '良好' : score >= 40 ? '一般' : '需要改进'
+  
+  return details
+}

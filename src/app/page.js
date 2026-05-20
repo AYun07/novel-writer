@@ -74,6 +74,11 @@ const TemplateManager = dynamic(() => import('../components/TemplateManager'), {
   ssr: false
 })
 
+const TimelineView = dynamic(() => import('../components/TimelineView'), {
+  loading: () => null,
+  ssr: false
+})
+
 const StatsPanel = dynamic(() => import('../components/StatsPanel'), {
   loading: () => <div className="w-80 bg-bg-secondary animate-pulse" />,
   ssr: false
@@ -103,6 +108,7 @@ export default function Home() {
     updateChapter,
     showSettings, 
     showLoginModal,
+    showTimelineModal,
     setChapters,
     setShowToast,
     setSidebarOpen,
@@ -311,6 +317,16 @@ export default function Home() {
       <CorpusManager />
       <SessionManager />
       <TemplateManager />
+      
+      {showTimelineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => useAppStore.getState().setShowTimelineModal(false)} />
+          <div className="relative bg-bg-primary rounded-xl shadow-lg w-full max-w-5xl max-h-[90vh] overflow-hidden">
+            <TimelineView />
+          </div>
+        </div>
+      )}
+      
       <KeyboardShortcutsHelp
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}

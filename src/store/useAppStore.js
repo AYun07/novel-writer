@@ -64,8 +64,16 @@ const store = create(
       showTemplateModal: false,
       setShowTemplateModal: (show) => set({ showTemplateModal: !!show }),
 
+      showTimelineModal: false,
+      setShowTimelineModal: (show) => set({ showTimelineModal: !!show }),
+
       theme: 'light',
       setTheme: (theme) => set({ theme }),
+      colorScheme: 'blue',
+      setColorScheme: (colorScheme) => set({ colorScheme }),
+      
+      typewriterMode: false,
+      setTypewriterMode: (enabled) => set({ typewriterMode: enabled }),
 
       writingMode: 'webnovel',
       setWritingMode: (mode) => set({ writingMode: mode }),
@@ -142,6 +150,9 @@ const store = create(
       updateCharacter: (id, updates) => set((state) => ({ characters: state.characters.map(c => c.id === id ? { ...c, ...updates } : c) })),
       deleteCharacter: (id) => set((state) => ({ characters: state.characters.filter(c => c.id !== id) })),
 
+      timeline: [],
+      setTimeline: (events) => set({ timeline: events }),
+
       worldSettings: [],
       setWorldSettings: (settings) => set({ worldSettings: settings }),
 
@@ -209,6 +220,8 @@ const store = create(
         sidebarOpen: state.sidebarOpen,
         aiSidebarOpen: state.aiSidebarOpen,
         theme: state.theme,
+        colorScheme: state.colorScheme,
+        typewriterMode: state.typewriterMode,
         writingMode: state.writingMode,
         language: state.language,
         apiConfig: state.apiConfig,
@@ -218,6 +231,7 @@ const store = create(
         templates: state.templates,
         corpus: state.corpus,
         characters: state.characters,
+        timeline: state.timeline,
         worldSettings: state.worldSettings,
         novelInfo: state.novelInfo
       })
