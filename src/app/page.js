@@ -140,27 +140,26 @@ const GlobalSearch = dynamic(() => import('../components/GlobalSearch'), {
 })
 
 export default function Home() {
-  const { 
-    chapters = [], 
-    activeChapterId, 
-    updateChapter,
-    showSettings, 
-    showLoginModal,
-    showTimelineModal,
-    showVersionHistoryModal,
-    showToolsModal,
-    showProjectSelector,
-    showAchievements,
-    showPomodoro,
-    showReadingMode,
-    showFocusMode,
-    setChapters,
-    setShowToast,
-    setSidebarOpen,
-    setAiSidebarOpen,
-    activeProject,
-    achievements
-  } = useAppStore()
+  const store = useAppStore()
+  const chapters = store?.chapters || []
+  const activeChapterId = store?.activeChapterId
+  const updateChapter = store?.updateChapter
+  const showSettings = store?.showSettings
+  const showLoginModal = store?.showLoginModal
+  const showTimelineModal = store?.showTimelineModal
+  const showVersionHistoryModal = store?.showVersionHistoryModal
+  const showToolsModal = store?.showToolsModal
+  const showProjectSelector = store?.showProjectSelector
+  const showAchievements = store?.showAchievements
+  const showPomodoro = store?.showPomodoro
+  const showReadingMode = store?.showReadingMode
+  const showFocusMode = store?.showFocusMode
+  const setChapters = store?.setChapters
+  const showToast = store?.showToast
+  const setSidebarOpen = store?.setSidebarOpen
+  const setAiSidebarOpen = store?.setAiSidebarOpen
+  const activeProject = store?.activeProject
+  const achievements = store?.achievements
 
   const [isLoading, setIsLoading] = useState(true)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -191,7 +190,7 @@ export default function Home() {
   useEffect(() => {
     const unsubscribe = onAuthStateChangedHandler((user) => {
       if (user) {
-        setShowToast(`欢迎回来，${user.displayName || user.email}`, 'success')
+        showToast(`欢迎回来，${user.displayName || user.email}`, 'success')
       }
       setIsLoading(false)
     })

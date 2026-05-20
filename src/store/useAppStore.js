@@ -409,8 +409,7 @@ const store = create(
 )
 
 export function useAppStore(selector) {
-  if (selector) return store(selector)
-  return store
+  return store(selector)
 }
 
 useAppStore.getState = store.getState
