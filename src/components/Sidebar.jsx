@@ -1,4 +1,4 @@
-import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText, Calendar } from 'lucide-react';
+import { BookOpen, FolderPlus, Settings, User, ChevronLeft, ChevronRight, Plus, Trash2, Edit3, Eye, Download, Save, UserCircle, Globe, Book, Database, Zap, MessageSquare, FileText, Calendar, BarChart3, History } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '../lib/utils';
 import dynamic from 'next/dynamic';
@@ -9,7 +9,7 @@ const EmptyState = dynamic(() => import('./EmptyState'), {
 })
 
 export default function Sidebar() {
- const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, setShowTimelineModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates, timeline } = useAppStore();
+ const { sidebarOpen, setSidebarOpen, chapters, activeChapterId, setActiveChapterId, addChapter, deleteChapter, updateChapter, showSettings, setShowSettings, showLoginModal, setShowLoginModal, setShowExportModal, setShowBackupModal, setShowCharacterModal, setShowWorldModal, setShowNovelInfoModal, setShowCorpusModal, setShowSessionModal, setShowTemplateModal, setShowTimelineModal, setShowVersionHistoryModal, characters, worldSettings, corpus, novelInfo, sessionStore, templates, timeline, writingStats } = useAppStore();
  const handleAddChapter = () => {
  const newChapter = {
  id: `${Date.now()}`,
@@ -159,6 +159,29 @@ export default function Sidebar() {
  </button>
  </div>
  </div>
+ </div>
+
+ {/* 统计和历史 */}
+ <div className="space-y-2 mt-6 pt-4 border-t border-border-dark">
+ <h3 className="text-sm font-medium text-text-muted">数据中心</h3>
+ <button onClick={() => setShowVersionHistoryModal(true)} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors">
+ <div className="flex items-center gap-3">
+ <History className="w-5 h-5 text-primary"/>
+ <div className="text-left">
+ <p className="text-sm font-medium">版本历史</p>
+ <p className="text-xs text-text-muted mt-0.5">查看历史版本</p>
+ </div>
+ </div>
+ </button>
+ <button onClick={() => { setShowVersionHistoryModal(true); setShowToast('请在主界面使用写作统计', 'info'); }} className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-bg-sidebar-hover transition-colors">
+ <div className="flex items-center gap-3">
+ <BarChart3 className="w-5 h-5 text-primary"/>
+ <div className="text-left">
+ <p className="text-sm font-medium">写作统计</p>
+ <p className="text-xs text-text-muted mt-0.5">{Object.keys(writingStats || {}).length} 天记录</p>
+ </div>
+ </div>
+ </button>
  </div>
 
  <div className="p-4 border-t border-border-dark space-y-2">

@@ -67,6 +67,9 @@ const store = create(
       showTimelineModal: false,
       setShowTimelineModal: (show) => set({ showTimelineModal: !!show }),
 
+      showVersionHistoryModal: false,
+      setShowVersionHistoryModal: (show) => set({ showVersionHistoryModal: !!show }),
+
       theme: 'light',
       setTheme: (theme) => set({ theme }),
       colorScheme: 'blue',
@@ -186,7 +189,7 @@ const store = create(
       },
       setWritingGoals: (goals) => set({ writingGoals: goals }),
 
-      apiConfig: {
+      aiConfig: {
         apiKey: '',
         baseURL: 'https://open.bigmodel.cn/api/paas/v4',
         selectedModel: 'glm-4-flash',
@@ -194,7 +197,7 @@ const store = create(
         temperature: 0.7,
         providerType: 'zhipu'
       },
-      setApiConfig: (config) => set((state) => ({ apiConfig: { ...state.apiConfig, ...config } })),
+      setAiConfig: (config) => set((state) => ({ aiConfig: { ...state.aiConfig, ...config } })),
 
       searchConfig: {
         provider: 'tavily',
@@ -209,7 +212,39 @@ const store = create(
         baseUrl: '',
         model: ''
       },
-      setEmbeddingConfig: (config) => set((state) => ({ embeddingConfig: { ...state.embeddingConfig, ...config } }))
+      setEmbeddingConfig: (config) => set((state) => ({ embeddingConfig: { ...state.embeddingConfig, ...config } })),
+
+      systemSettings: {
+        theme: 'light',
+        fontSize: 16,
+        autoSave: true,
+        autoSaveInterval: 300000,
+        language: 'zh-CN'
+      },
+      setSystemSettings: (settings) => set((state) => ({ systemSettings: { ...state.systemSettings, ...settings } })),
+
+      versionHistory: [],
+      setVersionHistory: (history) => set({ versionHistory: history }),
+      addVersionHistory: (version) => {
+        const newVersion = { ...version, id: createId(), timestamp: new Date().toISOString() }
+        set((state) => ({ 
+          versionHistory: [newVersion, ...state.versionHistory].slice(0, 50) 
+        }))
+      },
+
+      writingStats: {},
+      setWritingStats: (stats) => set({ writingStats: stats }),
+      addDailyWriting: (wordCount) => {
+        const today = new Date().toISOString().split('T')[0]
+        set((state) => {
+          const newStats = { ...state.writingStats }
+          if (!newStats[today]) {
+            newStats[today] = 0
+          }
+          newStats[today] += wordCount
+          return { writingStats: newStats }
+        })
+      }
     }),
     {
       name: 'integrated-author-storage',
@@ -224,16 +259,19 @@ const store = create(
         typewriterMode: state.typewriterMode,
         writingMode: state.writingMode,
         language: state.language,
-        apiConfig: state.apiConfig,
+        aiConfig: state.aiConfig,
         searchConfig: state.searchConfig,
         embeddingConfig: state.embeddingConfig,
+        systemSettings: state.systemSettings,
         writingGoals: state.writingGoals,
         templates: state.templates,
         corpus: state.corpus,
         characters: state.characters,
         timeline: state.timeline,
         worldSettings: state.worldSettings,
-        novelInfo: state.novelInfo
+        novelInfo: state.novelInfo,
+        versionHistory: state.versionHistory,
+        writingStats: state.writingStats
       })
     }
   )
