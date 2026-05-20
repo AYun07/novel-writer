@@ -1,7 +1,7 @@
 {
   "name": "integrated-author",
   "version": "1.0.0",
-  "description": "整合91Writing和Author的AI小说创作平台",
+  "description": "AI小说创作平台",
   "type": "module",
   "scripts": {
     "dev": "next dev",

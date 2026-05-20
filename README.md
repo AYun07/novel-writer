@@ -1,6 +1,6 @@
 # Integrated Author - AI小说创作平台
 
-整合了91Writing和Author两个优秀项目的AI小说创作平台。
+原创AI小说创作平台。
 
 ## 特性
 
@@ -197,9 +197,4 @@ your_provider: {
 
 MIT License
 
-## 致谢
 
-本项目整合自以下优秀开源项目：
-
-- [91Writing](https://github.com/ponysb/91Writing) - AI小说创作工具
-- [Author](https://github.com/yuanshijiloong/author) - 大模型应用框架
